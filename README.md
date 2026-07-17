@@ -91,6 +91,7 @@ This project provides real-world experience in deploying scalable applications u
 
 ---
 
-## Author- Ganesh J
+## Author
+Ganesh J
 
-**Your Name**
+
