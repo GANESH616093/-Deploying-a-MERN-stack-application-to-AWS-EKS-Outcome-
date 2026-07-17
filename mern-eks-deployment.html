@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MERN on EKS — Deployment Blueprint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bp-blue: #0B2E4F;
+    --bp-blue-dark: #071F38;
+    --bp-panel: #0E3457;
+    --bp-line: #5D93C2;
+    --bp-line-dim: #3C6488;
+    --bp-line-bright: #BFE0FF;
+    --bp-white: #F3F8FC;
+    --bp-amber: #E8A33D;
+    --bp-muted: #7C9BB8;
+    --bp-green: #7FD9A6;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --disp: 'Space Grotesk', sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(191,224,255,0.055) 0px, rgba(191,224,255,0.055) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, rgba(191,224,255,0.055) 0px, rgba(191,224,255,0.055) 1px, transparent 1px, transparent 28px),
+      var(--bp-blue);
+    color: var(--bp-white);
+    font-family: var(--sans);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  ::selection{ background: var(--bp-amber); color: var(--bp-blue-dark); }
+
+  a{ color: var(--bp-line-bright); }
+
+  .wrap{
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  .eyebrow{
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--bp-amber);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom: 18px;
+  }
+  .eyebrow::before{
+    content:"";
+    width: 22px; height:1px;
+    background: var(--bp-amber);
+    display:inline-block;
+  }
+
+  
+  .sheet{
+    position:relative;
+    border: 1px solid var(--bp-line-dim);
+    padding: 56px 48px;
+    margin: 0 0 2px 0;
+  }
+  .sheet::before, .sheet::after,
+  .sheet .c-tl, .sheet .c-br { display:none; }
+  .corner{
+    position:absolute;
+    width:14px; height:14px;
+    border-color: var(--bp-line-bright);
+    border-style: solid;
+  }
+  .corner.tl{ top:-1px; left:-1px; border-width:2px 0 0 2px; }
+  .corner.tr{ top:-1px; right:-1px; border-width:2px 2px 0 0; }
+  .corner.bl{ bottom:-1px; left:-1px; border-width:0 0 2px 2px; }
+  .corner.br{ bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
+
+  
+  .hero{
+    padding-top: 88px;
+    padding-bottom: 60px;
+  }
+  .hero-frame{
+    border: 1px solid var(--bp-line-dim);
+    padding: 64px 48px 0 48px;
+    position:relative;
+  }
+  h1.title{
+    font-family: var(--disp);
+    font-weight:700;
+    font-size: clamp(40px, 6vw, 68px);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    margin: 0 0 22px 0;
+  }
+  h1.title .accent{ color: var(--bp-amber); }
+
+  .lede{
+    font-size: 18px;
+    color: var(--bp-muted);
+    max-width: 560px;
+    margin: 0 0 44px 0;
+  }
+  .lede strong{ color: var(--bp-white); font-weight:600; }
+
+  
+  .title-block{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--bp-line-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--bp-muted);
+  }
+  .title-block div{
+    padding: 14px 18px;
+    border-left: 1px solid var(--bp-line-dim);
+  }
+  .title-block div:first-child{ border-left:none; }
+  .title-block b{
+    display:block;
+    color: var(--bp-line-bright);
+    font-size: 13px;
+    margin-bottom: 3px;
+  }
+
+  
+  section{ padding: 78px 0; }
+  h2.h{
+    font-family: var(--disp);
+    font-weight:600;
+    font-size: clamp(26px, 3.4vw, 34px);
+    margin: 0 0 20px 0;
+  }
+  .section-lede{
+    color: var(--bp-muted);
+    max-width: 620px;
+    font-size: 16px;
+    margin-bottom: 44px;
+  }
+  hr.rule{
+    border:none;
+    border-top: 1px solid var(--bp-line-dim);
+    margin:0;
+  }
+
+  
+  .diagram-wrap{
+    border: 1px solid var(--bp-line-dim);
+    padding: 12px;
+    position:relative;
+    overflow-x:auto;
+  }
+  .diagram-wrap svg{ display:block; width:100%; height:auto; min-width:640px; }
+  .node-box{ fill: rgba(191,224,255,0.03); stroke: var(--bp-line); stroke-width:1; transition: stroke 0.2s, fill 0.2s; }
+  .node-box.hoverable:hover{ stroke: var(--bp-amber); fill: rgba(232,163,61,0.08); cursor: default; }
+  .node-label{ font-family: var(--mono); fill: var(--bp-white); font-size:11px; }
+  .node-sub{ font-family: var(--mono); fill: var(--bp-muted); font-size:9px; }
+  .zone-label{ font-family: var(--mono); fill: var(--bp-line); font-size:10px; letter-spacing:0.08em; }
+  .flow-line{ stroke: var(--bp-line); stroke-width:1; fill:none; marker-end:url(#arrow); }
+  .flow-line.dim{ stroke-dasharray: 3 3; stroke: var(--bp-line-dim); }
+  .diagram-caption{
+    font-family: var(--mono);
+    font-size:11px;
+    color: var(--bp-muted);
+    padding: 14px 6px 4px 6px;
+    display:flex;
+    justify-content: space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  
+  .step{
+    display:grid;
+    grid-template-columns: 64px 1fr;
+    gap: 24px;
+    padding: 28px 0;
+    border-top: 1px solid var(--bp-line-dim);
+  }
+  .step:last-child{ border-bottom: 1px solid var(--bp-line-dim); }
+  .step-num{
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--bp-amber);
+    padding-top:3px;
+  }
+  .step-title{
+    font-family: var(--disp);
+    font-size: 19px;
+    font-weight:600;
+    margin: 0 0 8px 0;
+  }
+  .step-body{ color: var(--bp-muted); font-size: 15px; max-width:640px; margin: 0 0 14px 0; }
+  code.inline{
+    font-family: var(--mono);
+    background: rgba(191,224,255,0.08);
+    color: var(--bp-line-bright);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 0.88em;
+  }
+  pre.cmd{
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--bp-blue-dark);
+    border: 1px solid var(--bp-line-dim);
+    border-left: 2px solid var(--bp-amber);
+    padding: 14px 18px;
+    overflow-x:auto;
+    color: var(--bp-line-bright);
+    margin:0;
+  }
+  pre.cmd .comment{ color: var(--bp-muted); }
+  pre.cmd .flag{ color: var(--bp-green); }
+
+  
+  .manifest-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--bp-line-dim);
+    border: 1px solid var(--bp-line-dim);
+  }
+  .manifest{
+    background: var(--bp-blue-dark);
+    padding: 22px 22px 24px;
+  }
+  .manifest-name{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--bp-amber);
+    margin-bottom: 12px;
+    letter-spacing: 0.03em;
+  }
+  pre.yaml{
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height:1.65;
+    margin:0;
+    color: var(--bp-muted);
+    overflow-x:auto;
+  }
+  pre.yaml .k{ color: var(--bp-line-bright); }
+  pre.yaml .v{ color: var(--bp-green); }
+  pre.yaml .c{ color: var(--bp-muted); font-style:italic; }
+
+  
+  .card-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--bp-line-dim);
+    border: 1px solid var(--bp-line-dim);
+  }
+  .card{
+    background: var(--bp-blue);
+    padding: 28px 26px;
+  }
+  .card-head{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom: 10px;
+  }
+  .card-tag{
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--bp-blue-dark);
+    background: var(--bp-amber);
+    padding: 2px 7px;
+    letter-spacing: 0.05em;
+  }
+  .card h3{
+    font-family: var(--disp);
+    font-size: 16px;
+    margin: 0;
+  }
+  .card p{ color: var(--bp-muted); font-size: 14px; margin: 0; }
+
+  
+  .metrics{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+  .metric{
+    text-align:center;
+    padding: 26px 10px;
+    border: 1px solid var(--bp-line-dim);
+    margin: -1px 0 0 -1px;
+  }
+  .metric .dim-line{
+    font-family: var(--mono);
+    color: var(--bp-line-dim);
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+  .metric .val{
+    font-family: var(--disp);
+    font-size: 32px;
+    font-weight:700;
+    color: var(--bp-line-bright);
+  }
+  .metric .lbl{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--bp-muted);
+    margin-top:8px;
+    text-transform:uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  
+  .stack-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .chip{
+    font-family: var(--mono);
+    font-size: 12.5px;
+    border: 1px solid var(--bp-line-dim);
+    color: var(--bp-line-bright);
+    padding: 7px 13px;
+  }
+  .stack-group{ margin-bottom: 26px; }
+  .stack-group .glabel{
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--bp-amber);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-bottom: 12px;
+    display:block;
+  }
+
+  
+  footer{
+    padding: 60px 0 90px;
+    border-top: 1px solid var(--bp-line-dim);
+    text-align:center;
+  }
+  .stamp{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--bp-muted);
+    letter-spacing: 0.1em;
+  }
+  .footer-links{
+    margin-top: 22px;
+    display:flex;
+    gap: 26px;
+    justify-content:center;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .footer-links a{ color: var(--bp-line-bright); text-decoration:none; border-bottom: 1px solid var(--bp-line-dim); padding-bottom:2px; }
+  .footer-links a:hover{ border-color: var(--bp-amber); color: var(--bp-amber); }
+
+  .reveal{ opacity:0; transform: translateY(14px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.in{ opacity:1; transform:none; }
+
+  @media (prefers-reduced-motion: reduce){
+    .reveal{ opacity:1; transform:none; transition:none; }
+    html{ scroll-behavior:auto; }
+  }
+
+  @media (max-width: 720px){
+    .manifest-grid, .card-grid{ grid-template-columns: 1fr; }
+    .metrics{ grid-template-columns: 1fr 1fr; }
+    .title-block{ grid-template-columns: 1fr 1fr; }
+    .hero-frame{ padding: 44px 22px 0 22px; }
+    .sheet{ padding: 40px 22px; }
+    .wrap{ padding: 0 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  
+  <div class="hero">
+    <div class="hero-frame reveal in">
+      <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="eyebrow">Infrastructure case study</div>
+      <h1 class="title">Shipping a MERN<br>stack to <span class="accent">Amazon EKS</span></h1>
+      <p class="lede">A working record of containerizing a MongoDB / Express / React / Node application and running it on a production-grade Kubernetes cluster — from Dockerfile to autoscaled pods behind an Application Load Balancer.</p>
+
+      <div class="title-block">
+        <div><b>DRAWING</b>MERN&#8209;EKS&#8209;001</div>
+        <div><b>REGION</b>ap&#8209;south&#8209;1</div>
+        <div><b>CLUSTER</b>eks 1.29</div>
+        <div><b>REV</b>A · 2026</div>
+      </div>
+    </div>
+  </div>
+
+  
+  <section class="reveal">
+    <div class="eyebrow">01 · Brief</div>
+    <h2 class="h">Why EKS, and what's actually running</h2>
+    <p class="section-lede">The app itself is a plain MERN to-do/inventory tool — a React SPA talking to an Express REST API, backed by MongoDB. The interesting part was never the app; it was learning to reason about it as a distributed system: what happens when a pod dies mid-request, how traffic actually reaches a container, and what "production" means once you're the one holding the pager.</p>
+    <p class="section-lede" style="margin-top:-24px;">Goal for this build was deliberately narrow: run all three tiers as independently scalable Kubernetes workloads on a real AWS account, with no single point of manual intervention between a <code class="inline">git push</code> and traffic serving the new version.</p>
+  </section>
+
+  <hr class="rule">
+
+  
+  <section class="reveal">
+    <div class="eyebrow">02 · Architecture</div>
+    <h2 class="h">The cluster, laid out</h2>
+    <p class="section-lede">One VPC, two availability zones, three subnets tiers. The load balancer and NAT gateways sit in public subnets; everything that runs application code sits in private ones. Nothing in the node group has a public IP.</p>
+
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#5D93C2"></path>
+          </marker>
+        </defs>
+
+        
+        <rect class="node-box hoverable" x="20" y="30" width="130" height="46" rx="2"></rect>
+        <text class="node-label" x="34" y="50">Route 53</text>
+        <text class="node-sub" x="34" y="64">DNS</text>
+
+        <rect class="node-box hoverable" x="20" y="470" width="130" height="46" rx="2"></rect>
+        <text class="node-label" x="34" y="490">Amazon ECR</text>
+        <text class="node-sub" x="34" y="504">image registry</text>
+
+        <rect class="node-box hoverable" x="830" y="30" width="130" height="46" rx="2"></rect>
+        <text class="node-label" x="844" y="50">CloudWatch</text>
+        <text class="node-sub" x="844" y="64">logs / metrics</text>
+
+        
+        <rect x="190" y="20" width="600" height="520" fill="none" stroke="#3C6488" stroke-width="1" stroke-dasharray="4 3"></rect>
+        <text class="zone-label" x="200" y="14">VPC · 10.0.0.0/16</text>
+
+        
+        <rect x="210" y="44" width="560" height="90" fill="none" stroke="#3C6488" stroke-width="1"></rect>
+        <text class="zone-label" x="218" y="38">PUBLIC SUBNET · 2 AZ</text>
+
+        <rect class="node-box hoverable" x="230" y="64" width="150" height="50" rx="2"></rect>
+        <text class="node-label" x="244" y="85">ALB Ingress</text>
+        <text class="node-sub" x="244" y="99">/  ·  /api</text>
+
+        <rect class="node-box hoverable" x="600" y="64" width="150" height="50" rx="2"></rect>
+        <text class="node-label" x="614" y="85">NAT Gateway</text>
+        <text class="node-sub" x="614" y="99">outbound only</text>
+
+        
+        <rect x="210" y="154" width="560" height="270" fill="none" stroke="#3C6488" stroke-width="1"></rect>
+        <text class="zone-label" x="218" y="148">PRIVATE SUBNET · EKS MANAGED NODE GROUP (3 × t3.medium)</text>
+
+        <rect class="node-box hoverable" x="230" y="178" width="240" height="110" rx="2"></rect>
+        <text class="node-label" x="244" y="200">react-frontend</text>
+        <text class="node-sub" x="244" y="214">Deployment · 2 replicas</text>
+        <text class="node-sub" x="244" y="230">nginx:1.27-alpine</text>
+        <text class="node-sub" x="244" y="246">svc: ClusterIP :80</text>
+
+        <rect class="node-box hoverable" x="500" y="178" width="240" height="110" rx="2"></rect>
+        <text class="node-label" x="514" y="200">express-api</text>
+        <text class="node-sub" x="514" y="214">Deployment · 3 replicas</text>
+        <text class="node-sub" x="514" y="230">node:20-alpine</text>
+        <text class="node-sub" x="514" y="246">svc: ClusterIP :5000</text>
+
+        <rect class="node-box hoverable" x="230" y="320" width="510" height="80" rx="2"></rect>
+        <text class="node-label" x="244" y="342">mongodb-0</text>
+        <text class="node-sub" x="244" y="358">StatefulSet · 1 replica + EBS-backed PVC (gp3, 20Gi)</text>
+        <text class="node-sub" x="244" y="374">headless svc · internal only, no external route</text>
+
+        
+        <rect x="210" y="434" width="560" height="94" fill="none" stroke="#3C6488" stroke-width="1"></rect>
+        <text class="zone-label" x="218" y="428">IAM</text>
+        <text class="node-sub" x="230" y="458">IRSA: alb-controller-sa → AWSLoadBalancerControllerIAMPolicy</text>
+        <text class="node-sub" x="230" y="478">IRSA: external-secrets-sa → SecretsManagerReadWrite (scoped)</text>
+        <text class="node-sub" x="230" y="498">Node instance role → ECR pull, CloudWatch write</text>
+
+        
+        <path class="flow-line" d="M150,53 C170,53 190,53 230,89"></path>
+        <path class="flow-line" d="M305,114 L305,178"></path>
+        <path class="flow-line" d="M470,233 L500,233"></path>
+        <path class="flow-line dim" d="M620,178 C650,150 700,110 750,89"></path>
+        <path class="flow-line dim" d="M150,493 C300,493 400,460 500,290"></path>
+        <path class="flow-line dim" d="M830,53 C700,53 500,53 470,89"></path>
+        <path class="flow-line" d="M620,288 C620,300 470,300 470,320"></path>
+      </svg>
+      <div class="diagram-caption">
+        <span>solid line — request path</span>
+        <span>dashed line — control / image / telemetry path</span>
+        <span>hover a block for detail</span>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  
+  <section class="reveal">
+    <div class="eyebrow">03 · Build log</div>
+    <h2 class="h">Seven steps, in the order they actually happened</h2>
+    <p class="section-lede">Kept roughly chronological because the order matters — you can't attach an Ingress to a controller that doesn't exist yet, and you can't push images the cluster has no permission to pull.</p>
+
+    <div class="step">
+      <div class="step-num">01</div>
+      <div>
+        <h3 class="step-title">Containerize the app</h3>
+        <p class="step-body">Multi-stage Dockerfile for the React client — build with Node, serve the static output through nginx — and a slim <code class="inline">node:20-alpine</code> image for the Express API. Confirmed both worked together locally with docker-compose before touching AWS.</p>
+        <pre class="cmd"><span class="comment"># client/Dockerfile — build stage → nginx serve stage</span>
+docker build -t mern-client:1.0 ./client
+docker build -t mern-api:1.0 ./server
+docker compose up   <span class="comment"># sanity check, local only</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">02</div>
+      <div>
+        <h3 class="step-title">Push images to ECR</h3>
+        <p class="step-body">Created one repository per service, authenticated the Docker CLI against ECR, tagged with both a version and the git SHA so a rollback is always a known-good tag away.</p>
+        <pre class="cmd">aws ecr get-login-password --region ap-south-1 <span class="flag">\</span>
+  | docker login --username AWS --password-stdin 111111111111.dkr.ecr.ap-south-1.amazonaws.com
+docker tag mern-api:1.0 111111111111.dkr.ecr.ap-south-1.amazonaws.com/mern-api:a3f9c1
+docker push 111111111111.dkr.ecr.ap-south-1.amazonaws.com/mern-api:a3f9c1</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <div>
+        <h3 class="step-title">Provision the cluster</h3>
+        <p class="step-body">Used <code class="inline">eksctl</code> over the raw console — declarative, and it produces a VPC with public/private subnets across two AZs without hand-wiring route tables. Managed node group so AWS handles the underlying EC2 lifecycle.</p>
+        <pre class="cmd">eksctl create cluster <span class="flag">\</span>
+  --name mern-prod --region ap-south-1 --version 1.29 <span class="flag">\</span>
+  --nodegroup-name workers --node-type t3.medium <span class="flag">\</span>
+  --nodes 3 --nodes-min 2 --nodes-max 5 --managed</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">04</div>
+      <div>
+        <h3 class="step-title">Wire up networking</h3>
+        <p class="step-body">Associated an IAM OIDC provider with the cluster so pods can assume IAM roles directly (IRSA), then installed the AWS Load Balancer Controller through Helm — this is what turns a Kubernetes Ingress object into an actual ALB.</p>
+        <pre class="cmd">eksctl utils associate-iam-oidc-provider --cluster mern-prod --approve
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller <span class="flag">\</span>
+  -n kube-system --set clusterName=mern-prod</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">05</div>
+      <div>
+        <h3 class="step-title">Deploy the three workloads</h3>
+        <p class="step-body">Applied Deployments and ClusterIP Services for the frontend and API, and a StatefulSet for MongoDB with a PersistentVolumeClaim so data survives pod restarts. Connection string and JWT secret live in a Kubernetes Secret, not the image.</p>
+        <pre class="cmd">kubectl apply -f k8s/mongo-statefulset.yaml
+kubectl apply -f k8s/api-deployment.yaml
+kubectl apply -f k8s/client-deployment.yaml
+kubectl get pods -w</pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">06</div>
+      <div>
+        <h3 class="step-title">Expose it through Ingress</h3>
+        <p class="step-body">Single Ingress resource, annotated for an internet-facing ALB, routing <code class="inline">/api/*</code> to the Express service and everything else to the React service. One load balancer for the whole app instead of one per service.</p>
+        <pre class="cmd">kubectl apply -f k8s/ingress.yaml
+kubectl get ingress mern-ingress   <span class="comment"># wait for ADDRESS to populate</span></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">07</div>
+      <div>
+        <h3 class="step-title">Add the things that make it "production"</h3>
+        <p class="step-body">Liveness and readiness probes so the Service stops sending traffic to a pod before it's actually ready. A HorizontalPodAutoscaler on the API. A PodDisruptionBudget so node upgrades can't take out every API pod at once.</p>
+        <pre class="cmd">kubectl autoscale deployment express-api --cpu-percent=65 --min=3 --max=8
+kubectl apply -f k8s/pdb.yaml</pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  
+  <section class="reveal">
+    <div class="eyebrow">04 · Manifests</div>
+    <h2 class="h">Two files worth showing</h2>
+    <p class="section-lede">The API Deployment and the Ingress that fronts everything — trimmed for space, but this is the real shape of what's applied.</p>
+
+    <div class="manifest-grid">
+      <div class="manifest">
+        <div class="manifest-name">k8s/api-deployment.yaml</div>
+        <pre class="yaml"><span class="k">apiVersion:</span> <span class="v">apps/v1</span>
+<span class="k">kind:</span> <span class="v">Deployment</span>
+<span class="k">metadata:</span>
+  <span class="k">name:</span> <span class="v">express-api</span>
+<span class="k">spec:</span>
+  <span class="k">replicas:</span> <span class="v">3</span>
+  <span class="k">strategy:</span>
+    <span class="k">rollingUpdate:</span>
+      <span class="k">maxUnavailable:</span> <span class="v">0</span>
+      <span class="k">maxSurge:</span> <span class="v">1</span>
+  <span class="k">template:</span>
+    <span class="k">spec:</span>
+      <span class="k">containers:</span>
+        <span class="k">- name:</span> <span class="v">express-api</span>
+          <span class="k">image:</span> <span class="v">...ecr.../mern-api:a3f9c1</span>
+          <span class="k">envFrom:</span>
+            <span class="k">- secretRef:</span>
+                <span class="k">name:</span> <span class="v">mongo-uri</span>
+          <span class="k">readinessProbe:</span>
+            <span class="k">httpGet:</span> <span class="c"># /healthz, 5s interval</span>
+              <span class="k">path:</span> <span class="v">/healthz</span>
+              <span class="k">port:</span> <span class="v">5000</span></pre>
+      </div>
+      <div class="manifest">
+        <div class="manifest-name">k8s/ingress.yaml</div>
+        <pre class="yaml"><span class="k">apiVersion:</span> <span class="v">networking.k8s.io/v1</span>
+<span class="k">kind:</span> <span class="v">Ingress</span>
+<span class="k">metadata:</span>
+  <span class="k">name:</span> <span class="v">mern-ingress</span>
+  <span class="k">annotations:</span>
+    <span class="k">alb.ingress.kubernetes.io/scheme:</span> <span class="v">internet-facing</span>
+    <span class="k">alb.ingress.kubernetes.io/target-type:</span> <span class="v">ip</span>
+<span class="k">spec:</span>
+  <span class="k">rules:</span>
+    <span class="k">- http:</span>
+        <span class="k">paths:</span>
+          <span class="k">- path:</span> <span class="v">/api</span>
+            <span class="k">backend:</span>
+              <span class="k">service:</span>
+                <span class="k">name:</span> <span class="v">express-api</span>
+          <span class="k">- path:</span> <span class="v">/</span>
+            <span class="k">backend:</span>
+              <span class="k">service:</span>
+                <span class="k">name:</span> <span class="v">react-frontend</span> <span class="c"># catch-all</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  
+  <section class="reveal">
+    <div class="eyebrow">05 · Field notes</div>
+    <h2 class="h">What actually went wrong</h2>
+    <p class="section-lede">Not in order — these surfaced at different points and got fixed as they came up.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-head"><span class="card-tag">storage</span><h3>MongoDB needed to survive a pod restart</h3></div>
+        <p>A plain Deployment loses its filesystem on every reschedule. Switched to a StatefulSet with a <code class="inline">volumeClaimTemplate</code> backed by an EBS gp3 volume, so the same disk reattaches to the same pod identity.</p>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-tag">secrets</span><h3>Connection strings didn't belong in Git</h3></div>
+        <p>Started with plain Kubernetes Secrets, then moved to AWS Secrets Manager synced in through the External Secrets Operator — one less base64 string sitting in a YAML file.</p>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-tag">rollout</span><h3>Rolling updates were briefly dropping connections</h3></div>
+        <p>Default readiness probe fired too early. Added a real <code class="inline">/healthz</code> endpoint that checks the Mongo connection, and set <code class="inline">maxUnavailable: 0</code> so old pods don't terminate before new ones are ready.</p>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-tag">cost</span><h3>Three always-on nodes was overkill after hours</h3></div>
+        <p>Traffic is near-zero overnight in this timezone. Set the node group's autoscaler floor to 2 and let the HPA scale API pods down, rather than paying for peak capacity around the clock.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  
+  <section class="reveal">
+    <div class="eyebrow">06 · Where it landed</div>
+    <h2 class="h">Steady state</h2>
+    <div class="metrics">
+      <div class="metric"><div class="dim-line">|&nbsp;&larr;&nbsp;pods&nbsp;&rarr;&nbsp;|</div><div class="val">14</div><div class="lbl">running across 3 nodes</div></div>
+      <div class="metric"><div class="dim-line">|&nbsp;&larr;&nbsp;rollout&nbsp;&rarr;&nbsp;|</div><div class="val">~6m</div><div class="lbl">git push to serving traffic</div></div>
+      <div class="metric"><div class="dim-line">|&nbsp;&larr;&nbsp;latency&nbsp;&rarr;&nbsp;|</div><div class="val">180ms</div><div class="lbl">p95, API response</div></div>
+      <div class="metric"><div class="dim-line">|&nbsp;&larr;&nbsp;uptime&nbsp;&rarr;&nbsp;|</div><div class="val">99.9%</div><div class="lbl">over 30 days</div></div>
+      <div class="metric"><div class="dim-line">|&nbsp;&larr;&nbsp;scale&nbsp;&rarr;&nbsp;|</div><div class="val">3&ndash;8</div><div class="lbl">API replicas, HPA-bound</div></div>
+      <div class="metric"><div class="dim-line">|&nbsp;&larr;&nbsp;spend&nbsp;&rarr;&nbsp;|</div><div class="val">~$95</div><div class="lbl">per month, dev-scale</div></div>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  
+  <section class="reveal">
+    <div class="eyebrow">07 · Stack</div>
+    <h2 class="h">Everything in the drawing</h2>
+
+    <div class="stack-group">
+      <span class="glabel">Application</span>
+      <div class="stack-row">
+        <span class="chip">React</span><span class="chip">Express</span><span class="chip">Node.js 20</span><span class="chip">MongoDB 7</span><span class="chip">Mongoose</span>
+      </div>
+    </div>
+    <div class="stack-group">
+      <span class="glabel">Containers &amp; orchestration</span>
+      <div class="stack-row">
+        <span class="chip">Docker</span><span class="chip">Kubernetes 1.29</span><span class="chip">eksctl</span><span class="chip">Helm</span><span class="chip">kubectl</span>
+      </div>
+    </div>
+    <div class="stack-group">
+      <span class="glabel">AWS</span>
+      <div class="stack-row">
+        <span class="chip">EKS</span><span class="chip">ECR</span><span class="chip">ALB / ALB Controller</span><span class="chip">VPC</span><span class="chip">IAM · IRSA</span><span class="chip">Secrets Manager</span><span class="chip">CloudWatch</span><span class="chip">Route 53</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="reveal">
+    <div class="stamp">END OF DRAWING &nbsp;·&nbsp; MERN&#8209;EKS&#8209;001 &nbsp;·&nbsp; REV A</div>
+  </footer>
+
+</div>
+
+<script>
+  const items = document.querySelectorAll('.reveal:not(.in)');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting){
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  items.forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
